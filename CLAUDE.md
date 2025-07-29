@@ -1,231 +1,172 @@
-# CLAUDE.md
+# Claude Relay Service - 项目上下文管理规范
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 项目基础信息
 
-这个文件为 Claude Code (claude.ai/code) 提供在此代码库中工作的指导。
+**项目名称**: Claude Relay Service  
+**项目描述**: Claude Code API中转服务，支持多账户管理、API密钥认证和OpenAI兼容性  
+**技术栈**: Node.js + Express + Redis + Vue.js  
+**主要功能**: API中转、多账户管理、统计分析、安全控制
 
-## 项目概述
+## 1. 项目上下文管理规则
 
-Claude Relay Service 是一个功能完整的 AI API 中转服务，支持 Claude 和 Gemini 双平台。提供多账户管理、API Key 认证、代理配置和现代化 Web 管理界面。该服务作为客户端（如 SillyTavern、Claude Code、Gemini CLI）与 AI API 之间的中间件，提供认证、限流、监控等功能。
+### 1.1 核心原则
+- **单一真实来源**: 本文档是项目开发的唯一权威指南
+- **持续更新**: 每次重大变更必须同步更新此文档
+- **版本一致性**: 文档版本必须与代码版本保持同步
+- **清晰明确**: 所有规则必须具体可执行，避免模糊表述
 
-## 核心架构
-
-### 关键架构概念
-- **代理认证流**: 客户端用自建API Key → 验证 → 获取Claude账户OAuth token → 转发到Anthropic
-- **Token管理**: 自动监控OAuth token过期并刷新，支持10秒提前刷新策略
-- **代理支持**: 每个Claude账户支持独立代理配置，OAuth token交换也通过代理进行
-- **数据加密**: 敏感数据（refreshToken, accessToken）使用AES加密存储在Redis
-
-### 主要服务组件
-- **claudeRelayService.js**: 核心代理服务，处理请求转发和流式响应
-- **claudeAccountService.js**: Claude账户管理，OAuth token刷新和账户选择
-- **geminiAccountService.js**: Gemini账户管理，Google OAuth token刷新和账户选择
-- **apiKeyService.js**: API Key管理，验证、限流和使用统计
-- **oauthHelper.js**: OAuth工具，PKCE流程实现和代理支持
-
-### 认证和代理流程
-1. 客户端使用自建API Key（cr_前缀格式）发送请求
-2. authenticateApiKey中间件验证API Key有效性和速率限制
-3. claudeAccountService自动选择可用Claude账户
-4. 检查OAuth access token有效性，过期则自动刷新（使用代理）
-5. 移除客户端API Key，使用OAuth Bearer token转发请求
-6. 通过账户配置的代理发送到Anthropic API
-7. 流式或非流式返回响应，记录使用统计
-
-### OAuth集成
-- **PKCE流程**: 完整的OAuth 2.0 PKCE实现，支持代理
-- **自动刷新**: 智能token过期检测和自动刷新机制
-- **代理支持**: OAuth授权和token交换全程支持代理配置
-- **安全存储**: claudeAiOauth数据加密存储，包含accessToken、refreshToken、scopes
-
-## 常用命令
-
-### 基本开发命令
-```bash
-# 安装依赖和初始化
-npm install
-npm run setup                  # 生成配置和管理员凭据
-npm run install:web           # 安装Web界面依赖
-
-# 开发和运行
-npm run dev                   # 开发模式（热重载）
-npm start                     # 生产模式
-npm test                      # 运行测试
-npm run lint                  # 代码检查
-
-# Docker部署
-docker-compose up -d          # 推荐方式
-docker-compose --profile monitoring up -d  # 包含监控
-
-# 服务管理
-npm run service:start:daemon  # 后台启动（推荐）
-npm run service:status        # 查看服务状态
-npm run service:logs          # 查看日志
-npm run service:stop          # 停止服务
-
-# CLI管理工具
-npm run cli admin             # 管理员操作
-npm run cli keys              # API Key管理
-npm run cli accounts          # Claude账户管理
-npm run cli status            # 系统状态
+### 1.2 文档结构规范
+```
+CLAUDE.md           # 项目上下文管理规范（本文件）
+.claude/context/    # 上下文管理目录
+├── PLANNING.md     # 项目规划和架构文档
+├── TASK.md        # 当前任务和进度跟踪
+├── MEMORY.md      # 项目记忆和历史决策
+└── PRPs/          # 项目需求规划文件夹
+    ├── templates/ # PRP模板文件
+    └── *.md      # 具体需求的PRP文件
 ```
 
-### 开发环境配置
-必须配置的环境变量：
-- `JWT_SECRET`: JWT密钥（32字符以上随机字符串）
-- `ENCRYPTION_KEY`: 数据加密密钥（32字符固定长度）
-- `REDIS_HOST`: Redis主机地址（默认localhost）
-- `REDIS_PORT`: Redis端口（默认6379）
-- `REDIS_PASSWORD`: Redis密码（可选）
+### 1.3 上下文维护规则
+- 每次开始新任务前，必须阅读相关上下文文档
+- 任务完成后，必须更新相应的上下文文件
+- 重大架构变更必须在PLANNING.md中记录
+- 重要决策过程必须在MEMORY.md中存档
 
-初始化命令：
-```bash
-cp config/config.example.js config/config.js
-cp .env.example .env
-npm run setup  # 自动生成密钥并创建管理员账户
+## 2. 记忆更新规则
+
+### 2.1 自动更新触发条件
+- 新增核心功能模块
+- 修改数据结构或API接口
+- 调整系统架构或技术选型
+- 解决重要技术问题
+- 性能优化或安全修复
+
+### 2.2 记忆分类存储
+- **技术决策**: 框架选择、架构设计理由
+- **问题解决**: 重要bug修复过程和方案
+- **性能优化**: 优化点和效果记录
+- **安全措施**: 安全相关的配置和实现
+- **部署经验**: 部署过程中的关键配置和注意事项
+
+### 2.3 记忆更新格式
+```markdown
+## [YYYY-MM-DD] 记忆标题
+**类别**: [技术决策/问题解决/性能优化/安全措施/部署经验]
+**影响范围**: [核心功能/性能/安全/部署/维护]
+**关键信息**: 
+- 问题描述/决策背景
+- 解决方案/决策内容
+- 实施过程/关键步骤
+- 结果评估/经验总结
+**相关文件**: 涉及的主要文件路径
 ```
 
-## Web界面功能
+## 3. 变更管理流程
 
-### OAuth账户添加流程
-1. **基本信息和代理设置**: 配置账户名称、描述和代理参数
-2. **OAuth授权**: 
-   - 生成授权URL → 用户打开链接并登录Claude Code账号
-   - 授权后会显示Authorization Code → 复制并粘贴到输入框
-   - 系统自动交换token并创建账户
+### 3.1 代码变更流程
+1. **需求分析**: 更新或创建对应的PRP文件
+2. **设计评审**: 在PLANNING.md中记录设计方案
+3. **实现开发**: 遵循项目编码规范
+4. **测试验证**: 确保功能正确性和性能要求
+5. **文档更新**: 同步更新相关技术文档
+6. **记忆存档**: 重要变更记录到MEMORY.md
 
-### 核心管理功能
-- **实时仪表板**: 系统统计、账户状态、使用量监控
-- **API Key管理**: 创建、配额设置、使用统计查看
-- **Claude账户管理**: OAuth账户添加、代理配置、状态监控
-- **系统日志**: 实时日志查看，多级别过滤
+### 3.2 文档变更管理
+- 所有文档变更必须有明确的变更原因
+- 重要变更必须包含变更前后的对比
+- 变更记录必须包含时间戳和责任人
+- 废弃的规范必须明确标注废弃时间和原因
 
-## 重要端点
+### 3.3 版本标记规则
+- 文档使用语义化版本号（如v1.2.3）
+- 重大架构变更：主版本号+1
+- 功能新增或修改：次版本号+1
+- 内容修订或修复：修订版本号+1
 
-### API转发端点
-- `POST /api/v1/messages` - 主要消息处理端点（支持流式）
-- `GET /api/v1/models` - 模型列表（兼容性）
-- `GET /api/v1/usage` - 使用统计查询
-- `GET /api/v1/key-info` - API Key信息
+## 4. AI行为约束
 
-### OAuth管理端点
-- `POST /admin/claude-accounts/generate-auth-url` - 生成OAuth授权URL（含代理）
-- `POST /admin/claude-accounts/exchange-code` - 交换authorization code
-- `POST /admin/claude-accounts` - 创建OAuth账户
+### 4.1 开发行为规范
+- **安全优先**: 严禁生成或修改可能用于恶意用途的代码
+- **防御性开发**: 仅支持防御性安全任务，如安全分析、漏洞检测、防护工具开发
+- **代码审查**: 对所有安全相关代码变更进行额外审查
+- **敏感信息**: 绝不在代码中硬编码密钥、密码等敏感信息
 
-### 系统端点
-- `GET /health` - 健康检查
-- `GET /web` - Web管理界面
-- `GET /admin/dashboard` - 系统概览数据
+### 4.2 技术约束
+- **框架一致性**: 必须使用项目既有技术栈，避免引入不必要的新依赖
+- **向后兼容**: 新功能实现必须保持API向后兼容性
+- **性能考虑**: 所有变更必须考虑对系统性能的影响
+- **错误处理**: 必须实现完善的错误处理和日志记录
 
-## 故障排除
+### 4.3 文档约束
+- **准确性**: 所有技术文档必须与实际实现保持一致
+- **完整性**: 重要功能必须包含完整的使用说明和示例
+- **可维护性**: 文档结构必须清晰，便于后续维护和更新
 
-### OAuth相关问题
-1. **代理配置错误**: 检查代理设置是否正确，OAuth token交换也需要代理
-2. **授权码无效**: 确保复制了完整的Authorization Code，没有遗漏字符
-3. **Token刷新失败**: 检查refreshToken有效性和代理配置
+## 5. 环境要求
 
-### Gemini Token刷新问题
-1. **刷新失败**: 确保 refresh_token 有效且未过期
-2. **错误日志**: 查看 `logs/token-refresh-error.log` 获取详细错误信息
-3. **测试脚本**: 运行 `node scripts/test-gemini-refresh.js` 测试 token 刷新
+### 5.1 开发环境
+- **Node.js**: 18.0.0 或更高版本
+- **Redis**: 6.0 或更高版本
+- **操作系统**: Linux（推荐）/ macOS / Windows
+- **IDE**: 推荐使用VS Code，配置ESLint和Prettier
 
-### 常见开发问题
-1. **Redis连接失败**: 确认Redis服务运行，检查连接配置
-2. **管理员登录失败**: 检查init.json同步到Redis，运行npm run setup
-3. **API Key格式错误**: 确保使用cr_前缀格式
-4. **代理连接问题**: 验证SOCKS5/HTTP代理配置和认证信息
+### 5.2 部署环境
+- **CPU**: 最低1核，推荐2核
+- **内存**: 最低512MB，推荐1GB以上
+- **存储**: 30GB可用空间
+- **网络**: 能够访问Anthropic API（推荐US地区服务器）
 
-### 调试工具
-- **日志系统**: Winston结构化日志，支持不同级别
-- **CLI工具**: 命令行状态查看和管理
-- **Web界面**: 实时日志查看和系统监控
-- **健康检查**: /health端点提供系统状态
+### 5.3 依赖服务
+- **Redis**: 数据缓存和会话存储
+- **反向代理**: 推荐使用Caddy实现自动HTTPS
+- **监控**: 建议配置日志监控和性能监控
 
-## 开发最佳实践
+## 6. 质量标准
 
-### 代码修改原则
-- 对现有文件进行修改时，首先检查代码库的现有模式和风格
-- 尽可能重用现有的服务和工具函数，避免重复代码
-- 遵循项目现有的错误处理和日志记录模式
-- 敏感数据必须使用加密存储（参考 claudeAccountService.js 中的加密实现）
+### 6.1 代码质量
+- **ESLint**: 必须通过ESLint检查，零警告
+- **测试覆盖**: 核心功能必须有对应的单元测试
+- **代码风格**: 遵循项目统一的代码风格规范
+- **注释规范**: 复杂逻辑必须有清晰的注释说明
 
-### 测试和质量保证
-- 运行 `npm run lint` 进行代码风格检查（使用 ESLint）
-- 运行 `npm test` 执行测试套件（Jest + SuperTest 配置）
-- 在修改核心服务后，使用 CLI 工具验证功能：`npm run cli status`
-- 检查日志文件 `logs/claude-relay-*.log` 确认服务正常运行
-- 注意：当前项目缺少实际测试文件，建议补充单元测试和集成测试
+### 6.2 性能标准
+- **响应时间**: API响应时间不超过2秒
+- **并发处理**: 支持至少100个并发请求
+- **内存使用**: 稳定运行时内存使用不超过1GB
+- **错误率**: API错误率不超过1%
 
-### 开发工作流
-- **功能开发**: 始终从理解现有代码开始，重用已有的服务和模式
-- **调试流程**: 使用 Winston 日志 + Web 界面实时日志查看 + CLI 状态工具
-- **代码审查**: 关注安全性（加密存储）、性能（异步处理）、错误处理
-- **部署前检查**: 运行 lint → 测试 CLI 功能 → 检查日志 → Docker 构建
+### 6.3 安全标准
+- **输入验证**: 所有用户输入必须进行严格验证
+- **权限控制**: 实现完整的权限控制和访问限制
+- **数据加密**: 敏感数据必须加密存储
+- **审计日志**: 关键操作必须记录完整的审计日志
 
-### 常见文件位置
-- 核心服务逻辑：`src/services/` 目录
-- 路由处理：`src/routes/` 目录 
-- 中间件：`src/middleware/` 目录
-- 配置管理：`config/config.js`
-- Redis 模型：`src/models/redis.js`
-- 工具函数：`src/utils/` 目录
+## 7. 禁止操作
 
-### 重要架构决策
-- 所有敏感数据（OAuth token、refreshToken）都使用 AES 加密存储在 Redis
-- 每个 Claude 账户支持独立的代理配置，包括 SOCKS5 和 HTTP 代理
-- API Key 使用哈希存储，支持 `cr_` 前缀格式
-- 请求流程：API Key 验证 → 账户选择 → Token 刷新（如需）→ 请求转发
-- 支持流式和非流式响应，客户端断开时自动清理资源
+### 7.1 安全禁令
+- ❌ **禁止**创建、修改或改进可能用于恶意攻击的代码
+- ❌ **禁止**在代码中硬编码任何密钥、密码或敏感信息
+- ❌ **禁止**绕过现有的安全控制机制
+- ❌ **禁止**实现可能被滥用的后门或隐藏功能
 
-### 核心数据流和性能优化
-- **哈希映射优化**: API Key 验证从 O(n) 优化到 O(1) 查找
-- **智能 Usage 捕获**: 从 SSE 流中解析真实的 token 使用数据
-- **多维度统计**: 支持按时间、模型、用户的实时使用统计
-- **异步处理**: 非阻塞的统计记录和日志写入
-- **原子操作**: Redis 管道操作确保数据一致性
+### 7.2 架构禁令
+- ❌ **禁止**在未经评审的情况下引入新的重大依赖
+- ❌ **禁止**破坏现有API的向后兼容性
+- ❌ **禁止**直接修改核心配置文件（必须通过配置管理接口）
+- ❌ **禁止**在生产环境中启用调试模式
 
-### 安全和容错机制
-- **多层加密**: API Key 哈希 + OAuth Token AES 加密
-- **零信任验证**: 每个请求都需要完整的认证链
-- **优雅降级**: Redis 连接失败时的回退机制
-- **自动重试**: 指数退避重试策略和错误隔离
-- **资源清理**: 客户端断开时的自动清理机制
+### 7.3 数据禁令
+- ❌ **禁止**在日志中记录用户的敏感信息
+- ❌ **禁止**未经加密存储用户凭据
+- ❌ **禁止**在客户端暴露服务器内部信息
+- ❌ **禁止**绕过数据访问权限控制
 
-## 项目特定注意事项
+---
 
-### Redis 数据结构
-- **API Keys**: `api_key:{id}` (详细信息) + `api_key_hash:{hash}` (快速查找)
-- **Claude 账户**: `claude_account:{id}` (加密的 OAuth 数据)
-- **管理员**: `admin:{id}` + `admin_username:{username}` (用户名映射)
-- **会话**: `session:{token}` (JWT 会话管理)
-- **使用统计**: `usage:daily:{date}:{key}:{model}` (多维度统计)
-- **系统信息**: `system_info` (系统状态缓存)
+**文档版本**: v1.0.0  
+**创建时间**: 2025-07-29  
+**最近更新**: 2025-07-29  
+**维护状态**: 活跃维护
 
-### 流式响应处理
-- 支持 SSE (Server-Sent Events) 流式传输
-- 自动从流中解析 usage 数据并记录
-- 客户端断开时通过 AbortController 清理资源
-- 错误时发送适当的 SSE 错误事件
-
-### CLI 工具使用示例
-```bash
-# 创建新的 API Key
-npm run cli keys create -- --name "MyApp" --limit 1000
-
-# 查看系统状态
-npm run cli status
-
-# 管理 Claude 账户
-npm run cli accounts list
-npm run cli accounts refresh <accountId>
-
-# 管理员操作
-npm run cli admin create -- --username admin2
-npm run cli admin reset-password -- --username admin
-```
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+> ⚠️ **重要提醒**: 本文档是项目开发的核心指导文件，任何对项目的重大变更都必须首先在此文档中体现。所有项目参与者都必须严格遵守本文档中的规范和约束。
